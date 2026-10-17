@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S. // Stark Tech Task Matrix</title>
+
+  <!-- Google Fonts: Orbitron, Rajdhani, Share Tech Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap"
+    rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Three.js 3D Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Firebase Authentication + Firestore (account identity and cloud sync) -->
+  <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            stark: {
+              cyan: '#00f0ff',
+              blue: '#0077ff',
+              gold: '#ffb700',
+              crimson: '#ff0055',
+              dark: '#030a16',
+              panel: 'rgba(5, 18, 38, 0.75)',
+              border: 'rgba(0, 240, 255, 0.3)'
+            }
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            mono: ['Share Tech Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(3, 10, 22, 0.8);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #00f0ff;
+      border-radius: 2px;
+    }
+
+    body {
+      background-color: #020611;
+      color: #e2f1ff;
+      font-family: 'Rajdhani', sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    /* Holographic Scanline Overlay */
+    .scanline-overlay {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%,
+          rgba(0, 240, 255, 0.03) 50%);
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+
+    /* Tech HUD Glass Panel */
+    .hud-panel {
+      background: rgba(4, 16, 35, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.1), inset 0 0 15px rgba(0, 240, 255, 0.05);
+      position: relative;
+    }
+
+    /* Stark Corner Tech Brackets */
+    .tech-bracket::before,
+    .tech-bracket::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: #00f0ff;
+      pointer-events: none;
+    }
+
+    .tech-bracket::before {
+      top: -1px;
+      left: -1px;
+      border-top: 2px solid #00f0ff;
+      border-left: 2px solid #00f0ff;
+    }
+
+    .tech-bracket::after {
+      bottom: -1px;
+      right: -1px;
+      border-bottom: 2px solid #00f0ff;
+      border-right: 2px solid #00f0ff;
+    }
+
+    /* Glowing Text & Borders */
+    .glow-cyan {
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+    }
+
+    .glow-crimson {
+      text-shadow: 0 0 8px rgba(255, 0, 85, 0.8);
+    }
+
+    .glow-gold {
+      text-shadow: 0 0 8px rgba(255, 183, 0, 0.8);
+    }
+
+    .box-glow-cyan {
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+
+    /* ARC Reactor Pulse Keyframe */
+    @keyframes arcPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 15px rgba(0, 240, 255, 0.4);
+        transform: scale(1);
+      }
+
+      50% {
+        box-shadow: 0 0 30px rgba(0, 240, 255, 0.8), inset 0 0 25px rgba(0, 240, 255, 0.8);
+        transform: scale(1.03);
+      }
+    }
+
+    .arc-reactor-pulse {
+      animation: arcPulse 3s infinite ease-in-out;
+    }
+
+    @keyframes rotateSlow {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .rotate-slow {
+      animation: rotateSlow 20s linear infinite;
+    }
+
+    .rotate-slow-reverse {
+      animation: rotateSlow 28s linear infinite reverse;
+    }
+
+    /* Floating Orbit Card projected onto 3D Canvas */
+    .orbit-card {
+      transition: transform 0.2s cubic-bezier(0.1, 0.8, 0.2, 1), opacity 0.3s ease, border-color 0.2s ease;
+      will-change: transform, left, top;
+    }
+
+    .orbit-card:hover {
+      z-index: 100 !important;
+      border-color: #00f0ff !important;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.6) !important;
+    }
+
+    /* Sci-Fi Grid Background */
+    .grid-bg {
+      background-image:
+        linear-gradient(to right, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+  </style>
+</head>
+
+<body class="h-screen w-screen overflow-hidden flex flex-col grid-bg select-none">
+  <!-- SECURE IDENTITY GATE: app stays covered until Firebase verifies an account -->
+  <section id="auth-screen"
+    class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#020611]/95 backdrop-blur-xl overflow-y-auto">
+    <div class="absolute inset-0 grid-bg opacity-70 pointer-events-none"></div>
+    <div class="absolute inset-0 scanline-overlay pointer-events-none"></div>
+    <div
+      class="relative z-10 w-full max-w-md hud-panel tech-bracket rounded-xl border border-stark-cyan/60 p-6 sm:p-8 box-glow-cyan">
+      <div class="flex flex-col items-center text-center mb-6">
+        <div class="relative w-16 h-16 flex items-center justify-center mb-3">
+          <div class="absolute inset-0 rounded-full border border-stark-cyan rotate-slow opacity-80"></div>
+          <div class="absolute inset-2 rounded-full border border-dashed border-stark-gold rotate-slow-reverse"></div>
+          <i class="fa-solid fa-atom text-2xl text-stark-cyan glow-cyan"></i>
+        </div>
+        <p class="font-mono text-[10px] tracking-[0.3em] text-stark-gold">STARK INDUSTRIES // IDENTITY GATE</p>
+        <h2 class="font-orbitron text-xl sm:text-2xl font-bold text-stark-cyan glow-cyan mt-2">J.A.R.V.I.S. ACCESS</h2>
+        <p class="text-sm text-gray-400 mt-2">Sign in to open your private galaxy and sync your task protocols.</p>
+      </div>
+
+      <div id="auth-config-warning"
+        class="hidden mb-4 rounded border border-stark-gold/60 bg-stark-gold/10 p-3 text-xs font-mono text-stark-gold leading-relaxed">
+        FIREBASE SETUP REQUIRED. Add your Firebase web configuration to this HTML, enable Authentication providers,
+        create Firestore, and apply the supplied security rules before publishing.
+      </div>
+
+      <div id="auth-mode-tabs" class="grid grid-cols-2 gap-2 mb-4">
+        <button id="auth-tab-login" type="button" onclick="setAuthMode('login')"
+          class="bg-stark-cyan/20 border border-stark-cyan text-stark-cyan rounded px-3 py-2 text-[11px] font-orbitron">IDENTITY
+          LOGIN</button>
+        <button id="auth-tab-register" type="button" onclick="setAuthMode('register')"
+          class="bg-stark-dark/80 border border-stark-border text-gray-400 rounded px-3 py-2 text-[11px] font-orbitron">CREATE
+          ID</button>
+      </div>
+
+      <form id="auth-login-form" onsubmit="handleUsernameLogin(event)" class="space-y-3">
+        <label class="block">
+          <span class="block text-[10px] font-orbitron tracking-wider text-stark-cyan mb-1">UNIQUE USERNAME</span>
+          <input id="login-username" name="username" type="text" minlength="3" maxlength="20"
+            pattern="[A-Za-z0-9_]{3,20}" autocomplete="username" required placeholder="e.g. stark_001"
+            class="w-full bg-stark-dark/90 border border-stark-border rounded px-3 py-2.5 text-sm font-mono text-stark-cyan placeholder-gray-600 focus:outline-none focus:border-stark-cyan">
+        </label>
+        <label class="block">
+          <span class="block text-[10px] font-orbitron tracking-wider text-stark-cyan mb-1">PASSWORD</span>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required
+            placeholder="Enter your access key"
+            class="w-full bg-stark-dark/90 border border-stark-border rounded px-3 py-2.5 text-sm font-mono text-stark-cyan placeholder-gray-600 focus:outline-none focus:border-stark-cyan">
+        </label>
+        <button id="auth-login-submit" type="submit"
+          class="w-full mt-2 bg-stark-cyan/20 hover:bg-stark-cyan/30 text-stark-cyan border border-stark-cyan py-3 rounded font-orbitron text-xs font-bold tracking-wider">AUTHENTICATE</button>
+      </form>
+
+      <form id="auth-register-form" onsubmit="handleUsernameRegister(event)" class="hidden space-y-3">
+        <label class="block">
+          <span class="block text-[10px] font-orbitron tracking-wider text-stark-cyan mb-1">CHOOSE A UNIQUE
+            USERNAME</span>
+          <input id="register-username" name="username" type="text" minlength="3" maxlength="20"
+            pattern="[A-Za-z0-9_]{3,20}" autocomplete="username" required placeholder="3–20 letters, numbers or _"
+            class="w-full bg-stark-dark/90 border border-stark-border rounded px-3 py-2.5 text-sm font-mono text-stark-cyan placeholder-gray-600 focus:outline-none focus:border-stark-cyan">
+        </label>
+        <label class="block">
+          <span class="block text-[10px] font-orbitron tracking-wider text-stark-cyan mb-1">CREATE PASSWORD</span>
+          <input id="register-password" name="password" type="password" minlength="8" autocomplete="new-password"
+            required placeholder="At least 8 characters"
+            class="w-full bg-stark-dark/90 border border-stark-border rounded px-3 py-2.5 text-sm font-mono text-stark-cyan placeholder-gray-600 focus:outline-none focus:border-stark-cyan">
+        </label>
+        <label class="block">
+          <span class="block text-[10px] font-orbitron tracking-wider text-stark-cyan mb-1">CONFIRM PASSWORD</span>
+          <input id="register-confirm-password" name="confirmPassword" type="password" minlength="8"
+            autocomplete="new-password" required placeholder="Re-enter password"
+            class="w-full bg-stark-dark/90 border border-stark-border rounded px-3 py-2.5 text-sm font-mono text-stark-cyan placeholder-gray-600 focus:outline-none focus:border-stark-cyan">
+        </label>
+        <button id="auth-register-submit" type="submit"
+          class="w-full mt-2 bg-stark-cyan/20 hover:bg-stark-cyan/30 text-stark-cyan border border-stark-cyan py-3 rounded font-orbitron text-xs font-bold tracking-wider">INITIALIZE
+          IDENTITY</button>
+      </form>
+
+      <form id="auth-username-setup-form" onsubmit="handleGoogleUsernameSubmit(event)" class="hidden space-y-3">
+        <p class="text-sm text-gray-300 text-center">One final step, Sir. Choose the unique J.A.R.V.I.S. username
+          attached to your Google account.</p>
+        <label class="block">
+          <span class="block text-[10px] font-orbitron tracking-wider text-stark-cyan mb-1">YOUR J.A.R.V.I.S. ID</span>
+          <input id="google-username" name="username" type="text" minlength="3" maxlength="20"
+            pattern="[A-Za-z0-9_]{3,20}" autocomplete="username" required placeholder="Choose a unique username"
+            class="w-full bg-stark-dark/90 border border-stark-border rounded px-3 py-2.5 text-sm font-mono text-stark-cyan placeholder-gray-600 focus:outline-none focus:border-stark-cyan">
+        </label>
+        <button id="auth-username-setup-submit" type="submit"
+          class="w-full bg-stark-cyan/20 hover:bg-stark-cyan/30 text-stark-cyan border border-stark-cyan py-3 rounded font-orbitron text-xs font-bold tracking-wider">RESERVE
+          USERNAME</button>
+        <button type="button" onclick="cancelGoogleUsernameSetup()"
+          class="w-full text-xs text-gray-400 hover:text-stark-cyan py-1">Use another account</button>
+      </form>
+
+      <div id="auth-google-area" class="mt-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-px bg-stark-border flex-1"></div><span class="text-[9px] font-mono text-gray-500">OR CONTINUE
+            WITH</span>
+          <div class="h-px bg-stark-border flex-1"></div>
+        </div>
+        <button id="auth-google-button" type="button" onclick="handleGoogleSignIn()"
+          class="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-800 py-3 rounded font-semibold text-sm transition">
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#EA4335"
+              d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.01 13.22l7.98 6.19C11.91 13.72 17.37 9.5 24 9.5z" />
+            <path fill="#4285F4"
+              d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 38.01 46.98 31.87 46.98 24.55z" />
+            <path fill="#FBBC05"
+              d="M9.99 28.59A14.4 14.4 0 0 1 9.21 24c0-1.59.28-3.13.78-4.59l-7.98-6.2A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.01 10.78l7.98-6.19z" />
+            <path fill="#34A853"
+              d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.44-4.88 2.3-8.18 2.3-6.63 0-12.09-4.22-14.01-10.09l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+          </svg>
+          Continue with Google
+        </button>
+        <button
+          type="button"
+          id="guest-login-btn"
+          onclick="signInAsGuest()"
+          class="w-full mt-3 py-3 rounded-lg
+          bg-stark-dark border border-stark-cyan
+          text-stark-cyan font-orbitron
+          hover:bg-stark-cyan/20 transition">
+          CONTINUE AS GUEST
+        </button>
+      </div>
+
+      <p id="auth-status" role="status" aria-live="polite"
+        class="min-h-8 text-center text-xs font-mono text-gray-400 mt-4"></p>
+      <p class="text-[10px] leading-relaxed text-gray-500 text-center mt-2">Each account has its own cloud-saved task
+        galaxy. Username accounts currently have no self-service password reset, so keep that password safe. Google
+        sign-in uses your Google account.</p>
+    </div>
+  </section>
+
+  <!-- Scanline Screen Effect -->
+  <div class="scanline-overlay absolute inset-0 z-40"></div>
+
+  <!-- TOP J.A.R.V.I.S. HEADER -->
+  <header
+    class="relative z-30 h-16 hud-panel border-b border-stark-border flex items-center justify-between px-4 sm:px-6">
+    <!-- Left: J.A.R.V.I.S. Logo & Core Status -->
+    <div class="flex items-center space-x-3">
+      <div class="relative w-10 h-10 flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full border border-stark-cyan rotate-slow opacity-70"></div>
+        <div class="absolute inset-1 rounded-full border border-dashed border-stark-gold rotate-slow-reverse"></div>
+        <i class="fa-solid fa-atom text-stark-cyan text-lg glow-cyan"></i>
+      </div>
+      <div>
+        <h1
+          class="font-orbitron font-extrabold text-base sm:text-lg tracking-wider text-stark-cyan flex items-center gap-2">
+          J.A.R.V.I.S. <span
+            class="text-xs font-mono px-2 py-0.5 rounded bg-stark-blue/20 text-stark-cyan border border-stark-cyan/40">v4.8</span>
+        </h1>
+        <p class="text-xs font-mono text-gray-400 hidden sm:block">STARK INDUSTRIES // GALAXY TASK PROTOCOL</p>
+      </div>
+    </div>
+
+    <!-- Center: Active List Navigator & Tabs -->
+    <div class="flex items-center space-x-2 max-w-xs sm:max-w-md md:max-w-xl overflow-x-auto py-1 no-scrollbar">
+      <div id="list-tabs-container" class="flex items-center space-x-2">
+        <!-- Rendered via JS -->
+      </div>
+      <button id="btn-add-list" onclick="createNewListPrompt()"
+        class="hud-panel hover:bg-stark-cyan/20 text-stark-cyan px-3 py-1.5 rounded text-xs font-orbitron flex items-center gap-1.5 transition border border-stark-cyan/40 whitespace-nowrap">
+        <i class="fa-solid fa-plus"></i> NEW PROTOCOL
+      </button>
+    </div>
+
+    <!-- Right: File Storage Controls & Systems Toggles -->
+    <div class="flex items-center space-x-2 sm:space-x-3">
+      <!-- File Explorer Operations -->
+      <div class="hidden lg:flex items-center space-x-1.5 bg-stark-dark/80 p-1 rounded border border-stark-border">
+        <button onclick="saveToFileSystem()"
+          class="hover:bg-stark-cyan/20 text-stark-cyan px-2.5 py-1 rounded text-xs font-mono flex items-center gap-1"
+          title="Save Active List to Disk File">
+          <i class="fa-solid fa-floppy-disk text-stark-gold"></i> SAVE FILE
+        </button>
+        <button onclick="loadFromFileSystem()"
+          class="hover:bg-stark-cyan/20 text-stark-cyan px-2.5 py-1 rounded text-xs font-mono flex items-center gap-1"
+          title="Load List File from Explorer">
+          <i class="fa-solid fa-folder-open text-stark-cyan"></i> OPEN FILE
+        </button>
+        <button onclick="exportAllProtocols()"
+          class="hover:bg-stark-cyan/20 text-stark-cyan px-2.5 py-1 rounded text-xs font-mono flex items-center gap-1"
+          title="Export All Data as JSON Archive">
+          <i class="fa-solid fa-file-export text-stark-blue"></i> EXPORT
+        </button>
+      </div>
+
+      <!-- View Switcher (3D Orbit vs 2D Matrix) -->
+      <button id="btn-view-toggle" onclick="toggleViewMode()"
+        class="hud-panel px-3 py-1.5 rounded text-xs font-orbitron text-stark-cyan hover:bg-stark-cyan/20 border border-stark-cyan/50 flex items-center gap-2">
+        <i class="fa-solid fa-cube text-stark-gold"></i> <span id="view-mode-label" class="hidden sm:inline">2D
+          MATRIX</span>
+      </button>
+
+      <!-- Calendar Overlay Toggle -->
+      <button onclick="toggleCalendarDrawer()"
+        class="hud-panel px-3 py-1.5 rounded text-xs font-orbitron text-stark-cyan hover:bg-stark-cyan/20 border border-stark-cyan/50 flex items-center gap-1.5">
+        <i class="fa-solid fa-calendar-days"></i>
+      </button>
+
+      <!-- Audio / Speech Synth Toggles -->
+      <button id="btn-audio-toggle" onclick="toggleAudio()"
+        class="hud-panel px-2.5 py-1.5 rounded text-xs text-stark-cyan hover:bg-stark-cyan/20 border border-stark-cyan/50"
+        title="Sound Effects Toggle">
+        <i id="audio-icon" class="fa-solid fa-volume-high text-stark-cyan"></i>
+      </button>
+      <button id="btn-voice-toggle" onclick="toggleVoice()"
+        class="hud-panel px-2.5 py-1.5 rounded text-xs text-stark-cyan hover:bg-stark-cyan/20 border border-stark-cyan/50"
+        title="J.A.R.V.I.S. Voice Response Toggle">
+        <i id="voice-icon" class="fa-solid fa-comment-dots text-stark-gold"></i>
+      </button>
+      <div class="hidden xl:flex flex-col text-right leading-tight max-w-32">
+        <span class="text-[9px] font-mono text-gray-500">AUTHENTICATED ID</span>
+        <span id="account-username-label" class="text-[11px] font-orbitron text-stark-cyan truncate">OFFLINE</span>
+      </div>
+      <button id="btn-signout" onclick="jarvisSignOut()"
+        class="hud-panel px-2.5 py-1.5 rounded text-xs text-stark-gold hover:bg-stark-gold/10 border border-stark-cyan/50"
+        title="Sign out of J.A.R.V.I.S." aria-label="Sign out">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <div class="relative flex-1 flex overflow-hidden">
+
+    <!-- LEFT HUD SIDEBAR: ARC CORE & CLOCK & FILTERS -->
+    <aside
+      class="relative z-30 w-72 md:w-80 hud-panel border-r border-stark-border p-4 flex flex-col justify-between hidden md:flex tech-bracket">
+      <div class="space-y-4">
+        <!-- ARC Reactor Energy Gauge -->
+        <div
+          class="hud-panel p-3.5 rounded border border-stark-border flex items-center space-x-3 relative overflow-hidden">
+          <div class="relative w-16 h-16 flex-shrink-0 flex items-center justify-center">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <path class="text-stark-dark" stroke-width="3.5" stroke="currentColor" fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="arc-progress-path" class="text-stark-cyan stroke-current transition-all duration-700 ease-out"
+                stroke-dasharray="0, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div
+              class="absolute inset-0 flex items-center justify-center font-orbitron font-bold text-xs text-stark-cyan glow-cyan"
+              id="arc-completion-pct">
+              0%
+            </div>
+          </div>
+          <div>
+            <h3 class="font-orbitron text-xs font-bold text-stark-cyan uppercase tracking-wider">ARC CORE STATUS</h3>
+            <p id="arc-status-text" class="text-xs font-mono text-gray-300 mt-0.5">Efficiency Nominal</p>
+            <div class="text-[10px] font-mono text-stark-gold mt-1 flex items-center gap-1">
+              <span class="inline-block w-2 h-2 rounded-full bg-stark-gold animate-ping"></span>
+              <span id="completed-count-label">0 / 0 TASKS CLEAR</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Realtime Stark Clock Widget -->
+        <div class="hud-panel p-3.5 rounded border border-stark-border space-y-1">
+          <div
+            class="flex justify-between items-center text-[10px] font-mono text-stark-cyan border-b border-stark-border/40 pb-1">
+            <span id="stark-date-label">MON 13 OCT 2026</span>
+            <span class="text-stark-gold">UTC+05:30</span>
+          </div>
+          <div id="stark-clock-label"
+            class="font-mono text-2xl font-extrabold text-stark-cyan glow-cyan tracking-widest text-center py-1">
+            00:00:00.<span class="text-xs text-stark-gold">00</span>
+          </div>
+          <div class="flex justify-between text-[10px] font-mono text-gray-400">
+            <span>STARK SYS TIME</span>
+            <span id="stark-day-label">TUESDAY</span>
+          </div>
+        </div>
+
+        <!-- Task Search & Priority Filters -->
+        <div class="space-y-2">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-stark-cyan"></i>
+            <input type="text" id="task-search-input" oninput="renderTasks()" placeholder="SEARCH TASKS..."
+              class="w-full bg-stark-dark/90 border border-stark-border rounded pl-8 pr-3 py-1.5 text-xs font-mono text-stark-cyan placeholder-gray-500 focus:outline-none focus:border-stark-cyan">
+          </div>
+
+          <div class="flex flex-col space-y-1">
+            <label class="text-[10px] font-orbitron text-stark-cyan tracking-wider uppercase">Filter Priority</label>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button onclick="setFilterPriority('ALL')" id="filter-btn-ALL"
+                class="filter-btn active bg-stark-cyan/20 border border-stark-cyan text-stark-cyan px-2 py-1 rounded text-[11px] font-mono">ALL</button>
+              <button onclick="setFilterPriority('CRITICAL')" id="filter-btn-CRITICAL"
+                class="filter-btn bg-stark-dark/80 border border-stark-border text-stark-crimson px-2 py-1 rounded text-[11px] font-mono">CRITICAL</button>
+              <button onclick="setFilterPriority('HIGH')" id="filter-btn-HIGH"
+                class="filter-btn bg-stark-dark/80 border border-stark-border text-stark-gold px-2 py-1 rounded text-[11px] font-mono">HIGH</button>
+              <button onclick="setFilterPriority('ACTIVE')" id="filter-btn-ACTIVE"
+                class="filter-btn bg-stark-dark/80 border border-stark-border text-stark-cyan px-2 py-1 rounded text-[11px] font-mono">PENDING</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Task Creator & List Operations Button -->
+      <div class="space-y-2 border-t border-stark-border/50 pt-3">
+        <button onclick="openTaskModal()"
+          class="w-full bg-stark-cyan/20 hover:bg-stark-cyan/30 text-stark-cyan border border-stark-cyan py-2.5 rounded font-orbitron font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition box-glow-cyan">
+          <i class="fa-solid fa-plus-circle text-stark-gold text-sm"></i> CREATE NEW TASK
+        </button>
+        <div class="flex gap-2">
+          <button onclick="renameActiveListPrompt()"
+            class="flex-1 bg-stark-dark/80 hover:bg-stark-cyan/10 border border-stark-border py-1 text-[11px] font-mono text-stark-cyan rounded">
+            RENAME LIST
+          </button>
+          <button onclick="deleteActiveListPrompt()"
+            class="flex-1 bg-stark-dark/80 hover:bg-stark-crimson/20 border border-stark-crimson/50 py-1 text-[11px] font-mono text-stark-crimson rounded">
+            DELETE LIST
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER DISPLAY: 3D ASTRONOMY ORBIT SCENE & 2D MATRIX VIEW -->
+    <main class="relative flex-1 h-full overflow-hidden bg-transparent">
+
+      <!-- 3D GALAXY SYSTEM CANVAS CONTAINER -->
+      <div id="canvas-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing">
+        <!-- Three.js Canvas injected dynamically -->
+      </div>
+
+      <!-- PROJECTED 3D TASK ORBIT OVERLAY CONTAINER (Interactive floating 3D HUD task cards) -->
+      <div id="orbit-overlay-container" class="absolute inset-0 pointer-events-none overflow-hidden z-10">
+        <!-- Rendered dynamically by tracking 3D node positions -->
+      </div>
+
+      <!-- 2D HOLOGRAPHIC MATRIX VIEW CONTAINER (Alternative standard list layout) -->
+      <div id="view-2d-matrix"
+        class="absolute inset-0 z-20 p-4 sm:p-6 overflow-y-auto hidden bg-stark-dark/90 backdrop-blur-md">
+        <div class="max-w-5xl mx-auto space-y-4">
+          <div class="flex items-center justify-between border-b border-stark-border pb-3">
+            <div>
+              <h2 id="matrix-list-title" class="font-orbitron text-xl font-bold text-stark-cyan glow-cyan">
+                PROTOCOL LIST
+              </h2>
+              <p class="text-xs font-mono text-gray-400">Standard Holographic Grid View</p>
+            </div>
+            <button onclick="openTaskModal()"
+              class="bg-stark-cyan/20 hover:bg-stark-cyan/30 text-stark-cyan border border-stark-cyan px-4 py-2 rounded font-orbitron text-xs flex items-center gap-2">
+              <i class="fa-solid fa-plus"></i> ADD TASK
+            </button>
+          </div>
+
+          <!-- 2D Task Cards Grid -->
+          <div id="matrix-tasks-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating 3D Controls Help Hint -->
+      <div id="galaxy-controls-hint"
+        class="absolute bottom-4 left-4 z-20 hud-panel px-3 py-1.5 rounded text-[11px] font-mono text-stark-cyan border border-stark-cyan/30 flex items-center gap-2 pointer-events-none">
+        <i class="fa-solid fa-hand-pointer text-stark-gold animate-bounce"></i>
+        <span>DRAG TO ROTATE GALAXY STAR // SCROLL TO ZOOM</span>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: TASK CREATOR / INSPECTOR -->
+  <div id="modal-task"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+    <div
+      class="hud-panel w-full max-w-lg rounded-lg border border-stark-cyan p-6 space-y-4 tech-bracket relative box-glow-cyan">
+      <div class="flex items-center justify-between border-b border-stark-border pb-3">
+        <h3 id="modal-task-title" class="font-orbitron text-base font-bold text-stark-cyan flex items-center gap-2">
+          <i class="fa-solid fa-microchip text-stark-gold"></i> PROTOCOL TASK INSPECTOR
+        </h3>
+        <button onclick="closeTaskModal()" class="text-gray-400 hover:text-stark-crimson text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="task-form" onsubmit="handleTaskFormSubmit(event)" class="space-y-4">
+        <input type="hidden" id="task-id">
+
+        <div>
+          <label class="block text-xs font-orbitron text-stark-cyan mb-1 uppercase tracking-wider">Task Title</label>
+          <input type="text" id="task-title" required placeholder="e.g. Calibrate Mark 85 Flight Stabilization"
+            class="w-full bg-stark-dark border border-stark-border rounded px-3 py-2 text-sm font-mono text-stark-cyan focus:outline-none focus:border-stark-cyan">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-orbitron text-stark-cyan mb-1 uppercase tracking-wider">Priority
+              Level</label>
+            <select id="task-priority"
+              class="w-full bg-stark-dark border border-stark-border rounded px-3 py-2 text-xs font-mono text-stark-cyan focus:outline-none focus:border-stark-cyan">
+              <option value="LOW">LOW (Standard)</option>
+              <option value="MEDIUM" selected>MEDIUM (Moderate)</option>
+              <option value="HIGH">HIGH (Urgent)</option>
+              <option value="CRITICAL">CRITICAL (Immediate)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-orbitron text-stark-cyan mb-1 uppercase tracking-wider">Repeat
+              Cycle</label>
+            <select id="task-repeat"
+              class="w-full bg-stark-dark border border-stark-border rounded px-3 py-2 text-xs font-mono text-stark-cyan focus:outline-none focus:border-stark-cyan">
+              <option value="NONE">None</option>
+              <option value="DAILY">Daily Protocol</option>
+              <option value="WEEKLY">Weekly Cycle</option>
+              <option value="MONTHLY">Monthly Audit</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-orbitron text-stark-cyan mb-1 uppercase tracking-wider">Deadline Target Date
+            & Time</label>
+          <input type="datetime-local" id="task-deadline"
+            class="w-full bg-stark-dark border border-stark-border rounded px-3 py-2 text-xs font-mono text-stark-cyan focus:outline-none focus:border-stark-cyan">
+        </div>
+
+        <div>
+          <label class="block text-xs font-orbitron text-stark-cyan mb-1 uppercase tracking-wider">Protocol Details /
+            Specification</label>
+          <textarea id="task-details" rows="3" placeholder="Enter tactical details, code parameters, or briefing..."
+            class="w-full bg-stark-dark border border-stark-border rounded px-3 py-2 text-xs font-mono text-gray-200 focus:outline-none focus:border-stark-cyan"></textarea>
+        </div>
+
+        <div class="flex items-center justify-between border-t border-stark-border/50 pt-3">
+          <button type="button" id="btn-delete-task" onclick="deleteTaskFromModal()"
+            class="bg-stark-crimson/20 hover:bg-stark-crimson/40 text-stark-crimson border border-stark-crimson px-3 py-1.5 rounded text-xs font-orbitron hidden">
+            <i class="fa-solid fa-trash mr-1"></i> DELETE
+          </button>
+          <div class="flex space-x-2 ml-auto">
+            <button type="button" onclick="closeTaskModal()"
+              class="bg-stark-dark hover:bg-stark-border text-gray-300 px-4 py-1.5 rounded text-xs font-orbitron">
+              CANCEL
+            </button>
+            <button type="submit"
+              class="bg-stark-cyan/20 hover:bg-stark-cyan/40 text-stark-cyan border border-stark-cyan px-5 py-1.5 rounded font-orbitron text-xs font-bold box-glow-cyan">
+              SAVE TASK
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DRAWER: STARK CALENDAR OVERLAY -->
+  <div id="drawer-calendar" class="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm hidden">
+    <div
+      class="hud-panel w-full max-w-md h-full border-l border-stark-cyan p-6 flex flex-col justify-between space-y-4">
+      <div>
+        <div class="flex items-center justify-between border-b border-stark-border pb-3 mb-4">
+          <h3 class="font-orbitron text-base font-bold text-stark-cyan flex items-center gap-2">
+            <i class="fa-solid fa-calendar-alt text-stark-gold"></i> STARK CALENDAR SCHEDULE
+          </h3>
+          <button onclick="toggleCalendarDrawer()" class="text-gray-400 hover:text-stark-cyan text-lg">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div id="calendar-widget-container" class="space-y-4">
+          <!-- Calendar Grid generated by JS -->
+        </div>
+      </div>
+
+      <div class="text-xs font-mono text-gray-400 border-t border-stark-border pt-3">
+        SYSTEM REPORT: All deadlines synced with Stark Orbital Satellites.
+      </div>
+    </div>
+  </div>
+
+  <!-- STARK SYSTEM TOAST / NOTIFICATION -->
+  <div id="stark-toast"
+    class="fixed bottom-6 right-6 z-50 hud-panel border border-stark-cyan px-4 py-3 rounded-lg flex items-center gap-3 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none box-glow-cyan max-w-sm">
+    <div id="toast-icon-wrapper"
+      class="w-8 h-8 rounded-full bg-stark-cyan/20 border border-stark-cyan flex items-center justify-center text-stark-cyan">
+      <i id="toast-icon" class="fa-solid fa-info"></i>
+    </div>
+    <div>
+      <h4 id="toast-title" class="font-orbitron text-xs font-bold text-stark-cyan">J.A.R.V.I.S. NOTICE</h4>
+      <p id="toast-msg" class="text-xs font-mono text-gray-300">System initialization complete.</p>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       1. WEB AUDIO API SYNTHESIZER & SPEECH SYNTHESIS ENGINE
+       ========================================================================= */
+    class JarvisAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.soundEnabled = true;
+        this.voiceEnabled = true;
+      }
+
+      initContext() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playHover() {
+        if (!this.soundEnabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.04);
+
+        gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.04);
+      }
+
+      playClick() {
+        if (!this.soundEnabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1600, this.ctx.currentTime + 0.06);
+
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.06);
+      }
+
+      playSuccess() {
+        if (!this.soundEnabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+          gain.gain.setValueAtTime(0.06, now + idx * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.2);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.05);
+          osc.stop(now + idx * 0.05 + 0.2);
+        });
+      }
+
+      playDelete() {
+        if (!this.soundEnabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.15);
+
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+
+      playSwoosh() {
+        if (!this.soundEnabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.12);
+
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.12);
+      }
+
+      speak(text) {
+        if (!this.voiceEnabled || !('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel(); // cancel previous phrase
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.05;
+        utterance.pitch = 0.95;
+
+        const voices = window.speechSynthesis.getVoices();
+        // Prefer English male or standard synthetic voice
+        const jarvisVoice = voices.find(v => v.lang.includes('en') && (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Google US English') || v.name.includes('UK')));
+        if (jarvisVoice) utterance.voice = jarvisVoice;
+
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    const audioEngine = new JarvisAudioEngine();
+
+    // Attach global hover SFX to interactive elements
+    document.addEventListener('mouseover', (e) => {
+      if (e.target.closest('button, a, input, select, .orbit-card, .filter-btn')) {
+        audioEngine.playHover();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, a, input[type="checkbox"], .filter-btn')) {
+        audioEngine.playClick();
+      }
+    });
+
+    /* =========================================================================
+       2. APPLICATION STATE & DATA MODEL MANAGEMENT
+       ========================================================================= */
+    const STORAGE_KEY = 'JARVIS_STARK_TODO_APP_DATA_V1';
+
+    const defaultState = {
+      activeListId: 'list-1',
+      lists: [
+        {
+          id: 'list-1',
+          name: 'DEFAULT LIST',
+          tasks: [
+            {
+              id: 't-1',
+              title: 'DEFAULT TASK',
+              priority: 'MEDIUM',
+              deadline: '',
+              repeat: 'NONE',
+              details: 'Your first task goes here.',
+              completed: false
+            }
+          ]
+        }
+      ]
+    };
+
+    let appState = loadInitialState();
+    let currentPriorityFilter = 'ALL';
+    let is2DView = false;
+
+    function loadInitialState() {
+      // Never load a shared, browser-wide task store before the account is identified.
+      // Each authenticated account loads its own state from Firestore after sign-in.
+      return JSON.parse(JSON.stringify(defaultState));
+    }
+
+    function saveState() {
+      // Cloud persistence is scoped to the verified Firebase UID by the auth layer below.
+      if (typeof window.jarvisPersistState === 'function') {
+        window.jarvisPersistState(appState);
+      }
+      updateUI();
+    }
+
+    function getActiveList() {
+      return appState.lists.find(l => l.id === appState.activeListId) || appState.lists[0];
+    }
+
+    /* =========================================================================
+       3. FILE SYSTEM ACCESS API & LOCAL EXPLORER STORAGE
+       ========================================================================= */
+    async function saveToFileSystem() {
+      const list = getActiveList();
+      const fileData = JSON.stringify(list, null, 2);
+      const filename = `${list.name.toLowerCase().replace(/[^a-z0-0]/g, '_')}_protocol.jarvis`;
+
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: filename,
+            types: [{
+              description: 'J.A.R.V.I.S. Protocol File (*.jarvis, *.json)',
+              accept: { 'application/json': ['.jarvis', '.json'] }
+            }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(fileData);
+          await writable.close();
+          showToast('FILE SAVED', `Protocol file written to disk successfully.`);
+          audioEngine.speak("Protocol file saved to local storage, Sir.");
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+
+      // Fallback standard file download
+      downloadFile(filename, fileData);
+      showToast('FILE EXPORTED', `Downloaded protocol backup.`);
+      audioEngine.speak("Protocol file exported, Sir.");
+    }
+
+    async function loadFromFileSystem() {
+      if ('showOpenFilePicker' in window) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{
+              description: 'J.A.R.V.I.S. Protocol File (*.jarvis, *.json)',
+              accept: { 'application/json': ['.jarvis', '.json'] }
+            }]
+          });
+          const file = await handle.getFile();
+          const text = await file.text();
+          importListData(text);
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+
+      // Fallback file input picker
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,.jarvis';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (evt) => importListData(evt.target.result);
+          reader.readAsText(file);
+        }
+      };
+      input.click();
+    }
+
+    function importListData(jsonString) {
+      try {
+        const data = JSON.parse(jsonString);
+        if (data && data.name && Array.isArray(data.tasks)) {
+          // If importing a single list
+          data.id = 'list-' + Date.now();
+          appState.lists.push(data);
+          appState.activeListId = data.id;
+          saveState();
+          showToast('PROTOCOL LOADED', `Imported list "${data.name}"`);
+          audioEngine.speak(`New protocol ${data.name} loaded, Sir.`);
+        } else if (data && Array.isArray(data.lists)) {
+          // Full state import
+          appState = data;
+          saveState();
+          showToast('SYSTEM RESTORED', `Imported all system protocols.`);
+          audioEngine.speak("All system protocols loaded successfully, Sir.");
+        } else {
+          showToast('IMPORT FAILED', 'Invalid file structure.');
+        }
+      } catch (e) {
+        showToast('ERROR', 'Corrupted file payload.');
+      }
+    }
+
+    function exportAllProtocols() {
+      const fileData = JSON.stringify(appState, null, 2);
+      downloadFile(`JARVIS_SYSTEM_ALL_LISTS_${Date.now()}.json`, fileData);
+      showToast('ARCHIVE CREATED', 'Exported complete task matrix.');
+      audioEngine.speak("Full system archive generated, Sir.");
+    }
+
+    function downloadFile(filename, text) {
+      const elem = document.createElement('a');
+      elem.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(text));
+      elem.setAttribute('download', filename);
+      elem.style.display = 'none';
+      document.body.appendChild(elem);
+      elem.click();
+      document.body.removeChild(elem);
+    }
+
+    /* =========================================================================
+       4. 3D THREE.JS ASTRONOMY & GALAXY TASK ORBIT SYSTEM
+       ========================================================================= */
+    let scene, camera, renderer, starMesh, starCorona, starfieldPoints, orbitRingsGroup;
+    let isDraggingCanvas = false;
+    let previousMousePosition = { x: 0, y: 0 };
+    let galaxyRotation = { x: 0.3, y: 0 };
+    let orbitTime = 0;
+    let taskNodes3D = []; // Tracks 3D objects corresponding to tasks
+
+    function initThreeGalaxy() {
+      const container = document.getElementById('canvas-container');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      // 1. Scene & Camera
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x020611, 0.015);
+
+      camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+      camera.position.set(0, 8, 22);
+      camera.lookAt(0, 0, 0);
+
+      // 2. WebGL Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      // 3. Central Star Sphere Wireframe & Corona Pulsar
+      const starGeo = new THREE.IcosahedronGeometry(2.5, 3);
+      const starMat = new THREE.MeshBasicMaterial({
+        color: 0x00f0ff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.85
+      });
+      starMesh = new THREE.Mesh(starGeo, starMat);
+      scene.add(starMesh);
+
+      // Inner Glowing Core
+      const coreGeo = new THREE.SphereGeometry(1.8, 32, 32);
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0xffb700, transparent: true, opacity: 0.9 });
+      const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+      starMesh.add(coreMesh);
+
+      // Outer Corona Aura
+      const coronaGeo = new THREE.SphereGeometry(3.2, 32, 32);
+      const coronaMat = new THREE.MeshBasicMaterial({ color: 0x0077ff, transparent: true, opacity: 0.15, wireframe: true });
+      starCorona = new THREE.Mesh(coronaGeo, coronaMat);
+      scene.add(starCorona);
+
+      // 4. Galaxy Starfield Particles
+      const starfieldGeo = new THREE.BufferGeometry();
+      const count = 3000;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+
+      for (let i = 0; i < count * 3; i += 3) {
+        positions[i] = (Math.random() - 0.5) * 160;
+        positions[i + 1] = (Math.random() - 0.5) * 160;
+        positions[i + 2] = (Math.random() - 0.5) * 160;
+
+        // Color variance: Cyan, Deep Blue, White
+        const rand = Math.random();
+        if (rand > 0.6) {
+          colors[i] = 0; colors[i + 1] = 0.94; colors[i + 2] = 1; // Cyan
+        } else if (rand > 0.3) {
+          colors[i] = 1; colors[i + 1] = 0.71; colors[i + 2] = 0; // Gold
+        } else {
+          colors[i] = 0.8; colors[i + 1] = 0.9; colors[i + 2] = 1; // White Blue
+        }
+      }
+
+      starfieldGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      starfieldGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const starfieldMat = new THREE.PointsMaterial({
+        size: 0.7,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.8
+      });
+      starfieldPoints = new THREE.Points(starfieldGeo, starfieldMat);
+      scene.add(starfieldPoints);
+
+      // Group for Orbital Rings and Task Nodes
+      orbitRingsGroup = new THREE.Group();
+      scene.add(orbitRingsGroup);
+
+      // 5. Setup Mouse Rotation Controls
+      setupGalaxyInteraction(container);
+
+      // 6. Window Resize Handler
+      window.addEventListener('resize', () => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      });
+
+      // Start 3D Loop
+      animateGalaxy();
+    }
+
+    function setupGalaxyInteraction(container) {
+      const onDown = (e) => {
+        isDraggingCanvas = true;
+        previousMousePosition = {
+          x: e.clientX || (e.touches && e.touches[0].clientX),
+          y: e.clientY || (e.touches && e.touches[0].clientY)
+        };
+      };
+
+      const onMove = (e) => {
+        if (!isDraggingCanvas) return;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+        const deltaX = clientX - previousMousePosition.x;
+        const deltaY = clientY - previousMousePosition.y;
+
+        galaxyRotation.y += deltaX * 0.005;
+        galaxyRotation.x += deltaY * 0.005;
+
+        // Clamp pitch to avoid extreme flipping
+        galaxyRotation.x = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, galaxyRotation.x));
+
+        previousMousePosition = { x: clientX, y: clientY };
+      };
+
+      const onUp = () => { isDraggingCanvas = false; };
+
+      container.addEventListener('mousedown', onDown);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+
+      container.addEventListener('touchstart', onDown, { passive: true });
+      window.addEventListener('touchmove', onMove, { passive: true });
+      window.addEventListener('touchend', onUp);
+
+      // Zoom Wheel
+      container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        camera.position.z = Math.max(10, Math.min(45, camera.position.z + e.deltaY * 0.02));
+      }, { passive: false });
+    }
+
+    /* Rebuild Orbital Concentric Rings & Task Nodes whenever List Changes */
+    function rebuildGalaxyOrbits() {
+      if (!orbitRingsGroup) return;
+
+      // Clear existing rings
+      while (orbitRingsGroup.children.length > 0) {
+        const obj = orbitRingsGroup.children[0];
+        orbitRingsGroup.remove(obj);
+      }
+      taskNodes3D = [];
+
+      const list = getActiveList();
+      const tasks = filterTasks(list.tasks);
+
+      if (tasks.length === 0) {
+        updateOrbitHTMLCards([]);
+        return;
+      }
+
+      tasks.forEach((task, index) => {
+        const radius = 5.5 + index * 2.8; // Concentric orbit radius
+
+        // 1. Draw Ring Mesh
+        const ringGeo = new THREE.RingGeometry(radius - 0.03, radius + 0.03, 64);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: task.completed ? 0x0077ff : 0x00f0ff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.35
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.rotation.x = Math.PI / 2;
+        orbitRingsGroup.add(ringMesh);
+
+        // 2. Track Task 3D Node
+        taskNodes3D.push({
+          task: task,
+          radius: radius,
+          speed: 0.25 / (1 + index * 0.3), // Outer orbits move slightly slower
+          angle: (index * (Math.PI * 2 / tasks.length)),
+          isPaused: false,
+          currentPos: new THREE.Vector3()
+        });
+      });
+    }
+
+    function animateGalaxy() {
+      requestAnimationFrame(animateGalaxy);
+
+      orbitTime += 0.01;
+
+      // Rotate Star & Corona
+      if (starMesh) {
+        starMesh.rotation.y += 0.008;
+        starMesh.rotation.x += 0.003;
+      }
+      if (starCorona) {
+        starCorona.rotation.y -= 0.004;
+        const pulse = 1 + Math.sin(orbitTime * 3) * 0.05;
+        starCorona.scale.set(pulse, pulse, pulse);
+      }
+      if (starfieldPoints) {
+        starfieldPoints.rotation.y += 0.0005;
+      }
+
+      // Smooth Inertia Rotation for entire orbit system
+      if (orbitRingsGroup) {
+        orbitRingsGroup.rotation.x += (galaxyRotation.x - orbitRingsGroup.rotation.x) * 0.05;
+        orbitRingsGroup.rotation.y += (galaxyRotation.y - orbitRingsGroup.rotation.y) * 0.05;
+      }
+
+      // Update task positions along concentric orbital paths
+      taskNodes3D.forEach((node) => {
+        if (!node.isPaused) {
+          node.angle += node.speed * 0.015;
+        }
+
+        // Calculate 3D position
+        const x = Math.cos(node.angle) * node.radius;
+        const z = Math.sin(node.angle) * node.radius;
+        const y = Math.sin(node.angle * 2) * 0.4; // Subtle vertical wave
+
+        const localPos = new THREE.Vector3(x, y, z);
+        // Transform local ring position to global world position incorporating group rotation
+        node.currentPos.copy(localPos).applyEuler(orbitRingsGroup.rotation);
+      });
+
+      renderer.render(scene, camera);
+
+      // Project 3D Positions to HTML HUD Overlay Cards
+      updateOrbitHTMLCards(taskNodes3D);
+    }
+
+    /* Projects 3D node positions onto HTML HUD container */
+    function updateOrbitHTMLCards(nodes) {
+      const container = document.getElementById('orbit-overlay-container');
+      if (is2DView) {
+        container.innerHTML = '';
+        return;
+      }
+
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      // Map existing DOM elements or construct
+      let htmlContent = '';
+
+      nodes.forEach((node) => {
+        const tempV = node.currentPos.clone();
+        tempV.project(camera);
+
+        // Convert projection coordinates (-1 to +1) to screen pixels
+        const xScreen = (tempV.x * 0.5 + 0.5) * width;
+        const yScreen = (-(tempV.y * 0.5) + 0.5) * height;
+
+        // Check if point is in front of camera lens
+        const isVisible = tempV.z < 1.0 && xScreen > -100 && xScreen < width + 100 && yScreen > -50 && yScreen < height + 50;
+
+        // Depth-based scaling and opacity
+        const depthScale = Math.max(0.6, Math.min(1.15, (25 - tempV.z * 10) / 15));
+        const opacity = isVisible ? Math.max(0.35, Math.min(1, (1.2 - tempV.z))) : 0;
+
+        const pColor = getPriorityColor(node.task.priority);
+        const pBadge = getPriorityBadge(node.task.priority);
+
+        htmlContent += `
+          <div 
+            id="card-node-${node.task.id}"
+            onmouseenter="pauseOrbitNode('${node.task.id}', true)"
+            onmouseleave="pauseOrbitNode('${node.task.id}', false)"
+            onclick="openTaskModal('${node.task.id}')"
+            style="
+              position: absolute;
+              left: ${xScreen}px;
+              top: ${yScreen}px;
+              transform: translate(-50%, -50%) scale(${depthScale});
+              opacity: ${opacity};
+              pointer-events: ${opacity > 0.2 ? 'auto' : 'none'};
+            "
+            class="orbit-card hud-panel p-3 rounded-lg border border-stark-border/80 w-52 sm:w-60 cursor-pointer tech-bracket transition-transform hover:scale-105 ${node.task.completed ? 'opacity-60 grayscale' : ''}"
+          >
+            <div class="flex items-center justify-between border-b border-stark-border/40 pb-1 mb-1.5">
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${pBadge.bg} ${pBadge.text} border ${pBadge.border}">
+                ${node.task.priority}
+              </span>
+              <div class="flex items-center gap-1.5">
+                ${node.task.repeat !== 'NONE' ? `<i class="fa-solid fa-rotate-right text-[10px] text-stark-gold" title="Repeat: ${node.task.repeat}"></i>` : ''}
+                <button onclick="event.stopPropagation(); toggleTaskComplete('${node.task.id}')" class="text-xs hover:scale-125 transition">
+                  <i class="${node.task.completed ? 'fa-solid fa-circle-check text-stark-cyan glow-cyan' : 'fa-regular fa-circle text-gray-400 hover:text-stark-cyan'}"></i>
+                </button>
+              </div>
+            </div>
+
+            <h4 class="font-orbitron font-semibold text-xs text-stark-cyan truncate ${node.task.completed ? 'line-through text-gray-400' : ''}">
+              ${escapeHtml(node.task.title)}
+            </h4>
+
+            ${node.task.deadline ? `
+              <div class="text-[10px] font-mono text-stark-gold mt-1 flex items-center gap-1">
+                <i class="fa-regular fa-clock"></i>
+                <span>${formatDeadlineCountdown(node.task.deadline)}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+
+      container.innerHTML = htmlContent;
+    }
+
+    function pauseOrbitNode(taskId, pause) {
+      const node = taskNodes3D.find(n => n.task.id === taskId);
+      if (node) node.isPaused = pause;
+    }
+
+    /* =========================================================================
+       5. UI CONTROLLER & CORE APPS LOGIC
+       ========================================================================= */
+    function updateUI() {
+      renderListTabs();
+      renderTasks();
+      updateArcMeter();
+    }
+
+    function filterTasks(tasks) {
+      const search = (document.getElementById('task-search-input')?.value || '').toLowerCase();
+      return tasks.filter(t => {
+        const matchesSearch = t.title.toLowerCase().includes(search) || (t.details && t.details.toLowerCase().includes(search));
+        if (!matchesSearch) return false;
+
+        if (currentPriorityFilter === 'ALL') return true;
+        if (currentPriorityFilter === 'ACTIVE') return !t.completed;
+        return t.priority === currentPriorityFilter;
+      });
+    }
+
+    function renderListTabs() {
+      const container = document.getElementById('list-tabs-container');
+      if (!container) return;
+
+      container.innerHTML = appState.lists.map(list => {
+        const isActive = list.id === appState.activeListId;
+        return `
+          <button 
+            onclick="switchList('${list.id}')"
+            class="px-3 py-1.5 rounded text-xs font-orbitron transition flex items-center gap-2 whitespace-nowrap border ${isActive ? 'bg-stark-cyan/20 text-stark-cyan border-stark-cyan box-glow-cyan' : 'bg-stark-dark/80 text-gray-400 border-stark-border hover:text-stark-cyan hover:border-stark-cyan/50'}"
+          >
+            <i class="fa-solid fa-layer-group text-[10px] ${isActive ? 'text-stark-gold' : 'text-gray-500'}"></i>
+            <span>${escapeHtml(list.name)}</span>
+            <span class="text-[10px] font-mono bg-black/40 px-1.5 rounded-full text-stark-cyan">${list.tasks.length}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function switchList(listId) {
+      if (appState.activeListId === listId) return;
+      appState.activeListId = listId;
+      audioEngine.playSwoosh();
+      const activeList = getActiveList();
+      audioEngine.speak(`Switched to protocol ${activeList.name}`);
+      saveState();
+      rebuildGalaxyOrbits();
+    }
+
+    function createNewListPrompt() {
+      const name = prompt('ENTER NEW PROTOCOL / LIST NAME:', 'MARK PROTOCOL ' + (appState.lists.length + 1));
+      if (name && name.trim()) {
+        const newList = {
+          id: 'list-' + Date.now(),
+          name: name.trim().toUpperCase(),
+          tasks: []
+        };
+        appState.lists.push(newList);
+        appState.activeListId = newList.id;
+        saveState();
+        rebuildGalaxyOrbits();
+        showToast('PROTOCOL CREATED', `List "${newList.name}" initialized.`);
+        audioEngine.speak(`New protocol ${newList.name} created, Sir.`);
+      }
+    }
+
+    function renameActiveListPrompt() {
+      const list = getActiveList();
+      const newName = prompt('RENAME PROTOCOL LIST:', list.name);
+      if (newName && newName.trim()) {
+        list.name = newName.trim().toUpperCase();
+        saveState();
+        showToast('PROTOCOL RENAMED', `Updated to "${list.name}".`);
+      }
+    }
+
+    function deleteActiveListPrompt() {
+      if (appState.lists.length <= 1) {
+        showToast('SYSTEM WARNING', 'Cannot delete primary protocol list.');
+        return;
+      }
+      const list = getActiveList();
+      if (confirm(`ARE YOU SURE YOU WANT TO DISINTEGRATE PROTOCOL "${list.name}"?`)) {
+        appState.lists = appState.lists.filter(l => l.id !== list.id);
+        appState.activeListId = appState.lists[0].id;
+        audioEngine.playDelete();
+        saveState();
+        rebuildGalaxyOrbits();
+        showToast('PROTOCOL DISINTEGRATED', `Deleted list ${list.name}.`);
+        audioEngine.speak(`Protocol list disintegrated, Sir.`);
+      }
+    }
+
+    /* Render 2D Matrix Grid Tasks */
+    function renderTasks() {
+      const list = getActiveList();
+      const filtered = filterTasks(list.tasks);
+
+      // Rebuild 3D Orbits
+      rebuildGalaxyOrbits();
+
+      // Render 2D Matrix Grid UI
+      const matrixContainer = document.getElementById('matrix-tasks-grid');
+      document.getElementById('matrix-list-title').innerText = list.name;
+
+      if (!matrixContainer) return;
+
+      if (filtered.length === 0) {
+        matrixContainer.innerHTML = `
+          <div class="col-span-full py-12 text-center hud-panel rounded border border-stark-border/40">
+            <i class="fa-solid fa-radar text-3xl text-stark-cyan/40 mb-2"></i>
+            <p class="font-orbitron text-sm text-stark-cyan">NO TASKS IN ACTIVE PROTOCOL MATRIX</p>
+            <p class="text-xs font-mono text-gray-400 mt-1">Click 'CREATE NEW TASK' to add operational targets.</p>
+          </div>
+        `;
+        return;
+      }
+
+      matrixContainer.innerHTML = filtered.map(task => {
+        const pBadge = getPriorityBadge(task.priority);
+        return `
+          <div onclick="openTaskModal('${task.id}')" class="hud-panel p-4 rounded-lg border border-stark-border/70 hover:border-stark-cyan cursor-pointer transition tech-bracket flex flex-col justify-between space-y-3 ${task.completed ? 'opacity-60 bg-black/40' : ''}">
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded ${pBadge.bg} ${pBadge.text} border ${pBadge.border}">
+                ${task.priority}
+              </span>
+              <div class="flex items-center space-x-2">
+                ${task.repeat !== 'NONE' ? `<span class="text-[10px] font-mono text-stark-gold flex items-center gap-1"><i class="fa-solid fa-rotate-right"></i> ${task.repeat}</span>` : ''}
+                <button onclick="event.stopPropagation(); toggleTaskComplete('${task.id}')" class="text-base hover:scale-110 transition">
+                  <i class="${task.completed ? 'fa-solid fa-circle-check text-stark-cyan glow-cyan' : 'fa-regular fa-circle text-gray-400 hover:text-stark-cyan'}"></i>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <h4 class="font-orbitron font-semibold text-sm text-stark-cyan ${task.completed ? 'line-through text-gray-400' : ''}">
+                ${escapeHtml(task.title)}
+              </h4>
+              ${task.details ? `<p class="text-xs font-mono text-gray-300 mt-1 line-clamp-2">${escapeHtml(task.details)}</p>` : ''}
+            </div>
+
+            ${task.deadline ? `
+              <div class="text-xs font-mono text-stark-gold border-t border-stark-border/30 pt-2 flex items-center justify-between">
+                <span><i class="fa-regular fa-clock mr-1"></i> DEADLINE:</span>
+                <span>${formatDeadlineCountdown(task.deadline)}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleTaskComplete(taskId) {
+      const list = getActiveList();
+      const task = list.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.completed = !task.completed;
+        if (task.completed) {
+          audioEngine.playSuccess();
+          audioEngine.speak("Task completed, Sir.");
+          showToast('TARGET CLEARED', `Completed task: ${task.title}`);
+        } else {
+          audioEngine.playClick();
+        }
+        saveState();
+      }
+    }
+
+    function setFilterPriority(priority) {
+      currentPriorityFilter = priority;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('bg-stark-cyan/20', 'border-stark-cyan', 'text-stark-cyan');
+        btn.classList.add('bg-stark-dark/80', 'border-stark-border');
+      });
+      const activeBtn = document.getElementById(`filter-btn-${priority}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-stark-cyan/20', 'border-stark-cyan', 'text-stark-cyan');
+      }
+      renderTasks();
+    }
+
+    /* Modal Form Operations */
+    function openTaskModal(taskId = null) {
+      const modal = document.getElementById('modal-task');
+      const deleteBtn = document.getElementById('btn-delete-task');
+      modal.classList.remove('hidden');
+
+      if (taskId) {
+        const list = getActiveList();
+        const task = list.tasks.find(t => t.id === taskId);
+        if (task) {
+          document.getElementById('task-id').value = task.id;
+          document.getElementById('task-title').value = task.title;
+          document.getElementById('task-priority').value = task.priority;
+          document.getElementById('task-repeat').value = task.repeat;
+          document.getElementById('task-deadline').value = task.deadline || '';
+          document.getElementById('task-details').value = task.details || '';
+          deleteBtn.classList.remove('hidden');
+        }
+      } else {
+        document.getElementById('task-id').value = '';
+        document.getElementById('task-form').reset();
+        deleteBtn.classList.add('hidden');
+      }
+    }
+
+    function closeTaskModal() {
+      document.getElementById('modal-task').classList.add('hidden');
+    }
+
+    function handleTaskFormSubmit(e) {
+      e.preventDefault();
+      const taskId = document.getElementById('task-id').value;
+      const title = document.getElementById('task-title').value.trim();
+      const priority = document.getElementById('task-priority').value;
+      const repeat = document.getElementById('task-repeat').value;
+      const deadline = document.getElementById('task-deadline').value;
+      const details = document.getElementById('task-details').value.trim();
+
+      const list = getActiveList();
+
+      if (taskId) {
+        // Edit existing
+        const task = list.tasks.find(t => t.id === taskId);
+        if (task) {
+          task.title = title;
+          task.priority = priority;
+          task.repeat = repeat;
+          task.deadline = deadline;
+          task.details = details;
+          showToast('TASK UPDATED', `Protocol parameters saved.`);
+        }
+      } else {
+        // Create new
+        const newTask = {
+          id: 't-' + Date.now(),
+          title: title,
+          priority: priority,
+          repeat: repeat,
+          deadline: deadline,
+          details: details,
+          completed: false
+        };
+        list.tasks.push(newTask);
+        showToast('TASK ADDED', `New target synced to active orbit.`);
+        audioEngine.speak("New task added to active orbit, Sir.");
+      }
+
+      closeTaskModal();
+      saveState();
+    }
+
+    function deleteTaskFromModal() {
+      const taskId = document.getElementById('task-id').value;
+      if (!taskId) return;
+
+      const list = getActiveList();
+      list.tasks = list.tasks.filter(t => t.id !== taskId);
+      audioEngine.playDelete();
+      closeTaskModal();
+      saveState();
+      showToast('TASK DISINTEGRATED', 'Task deleted from protocol.');
+    }
+
+    /* ARC Reactor Completion Gauge */
+    function updateArcMeter() {
+      const list = getActiveList();
+      const total = list.tasks.length;
+      const completed = list.tasks.filter(t => t.completed).length;
+      const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+      document.getElementById('arc-completion-pct').innerText = `${pct}%`;
+      document.getElementById('arc-progress-path').setAttribute('stroke-dasharray', `${pct}, 100`);
+      document.getElementById('completed-count-label').innerText = `${completed} / ${total} TASKS CLEAR`;
+
+      const statusText = document.getElementById('arc-status-text');
+      if (pct === 100 && total > 0) {
+        statusText.innerText = "ALL PROTOCOLS CLEAR";
+        statusText.className = "text-xs font-mono text-stark-cyan font-bold glow-cyan";
+      } else if (pct > 50) {
+        statusText.innerText = "Efficiency Optimal";
+        statusText.className = "text-xs font-mono text-stark-gold";
+      } else {
+        statusText.innerText = "Efficiency Nominal";
+        statusText.className = "text-xs font-mono text-gray-300";
+      }
+    }
+
+    /* View Switcher (3D vs 2D) */
+    function toggleViewMode() {
+      is2DView = !is2DView;
+      const matrixView = document.getElementById('view-2d-matrix');
+      const label = document.getElementById('view-mode-label');
+
+      if (is2DView) {
+        matrixView.classList.remove('hidden');
+        label.innerText = '3D GALAXY';
+        audioEngine.speak("Switching to standard 2D holographic matrix.");
+      } else {
+        matrixView.classList.add('hidden');
+        label.innerText = '2D MATRIX';
+        audioEngine.speak("Switching to 3D astronomy galaxy system.");
+      }
+      renderTasks();
+    }
+
+    /* Calendar Drawer Toggle & Renderer */
+    function toggleCalendarDrawer() {
+      const drawer = document.getElementById('drawer-calendar');
+      drawer.classList.toggle('hidden');
+      if (!drawer.classList.contains('hidden')) {
+        renderCalendarWidget();
+      }
+    }
+
+    function renderCalendarWidget() {
+      const container = document.getElementById('calendar-widget-container');
+      const now = new Date();
+      const currentMonth = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+      const list = getActiveList();
+      const tasksWithDeadline = list.tasks.filter(t => t.deadline);
+
+      container.innerHTML = `
+        <div class="hud-panel p-3 rounded border border-stark-border/60">
+          <div class="text-xs font-orbitron font-bold text-stark-cyan text-center mb-2 uppercase tracking-widest">${currentMonth}</div>
+          <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-mono text-stark-gold mb-1">
+            <span>SU</span><span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span>
+          </div>
+          <div class="grid grid-cols-7 gap-1 text-center text-xs font-mono text-gray-300">
+            ${Array.from({ length: 31 }, (_, i) => {
+        const dayNum = i + 1;
+        const isToday = dayNum === now.getDate();
+        const hasTask = tasksWithDeadline.some(t => new Date(t.deadline).getDate() === dayNum);
+        return `
+                <div class="py-1.5 rounded relative ${isToday ? 'bg-stark-cyan/30 text-stark-cyan font-bold border border-stark-cyan' : 'bg-stark-dark/60 hover:bg-stark-cyan/10'}">
+                  ${dayNum}
+                  ${hasTask ? `<span class="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-stark-gold"></span>` : ''}
+                </div>
+              `;
+      }).join('')}
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="font-orbitron text-xs font-bold text-stark-cyan uppercase tracking-wider">SCHEDULED DEADLINES</h4>
+          <div class="space-y-1.5 max-h-48 overflow-y-auto">
+            ${tasksWithDeadline.length > 0 ? tasksWithDeadline.map(t => `
+              <div class="hud-panel p-2 rounded text-xs font-mono border border-stark-border flex justify-between items-center">
+                <span class="text-stark-cyan truncate">${escapeHtml(t.title)}</span>
+                <span class="text-stark-gold text-[10px] whitespace-nowrap">${new Date(t.deadline).toLocaleDateString()}</span>
+              </div>
+            `).join('') : '<p class="text-xs font-mono text-gray-500">No scheduled deadlines set.</p>'}
+          </div>
+        </div>
+      `;
+    }
+
+    /* System Audio & Voice Toggles */
+    function toggleAudio() {
+      audioEngine.soundEnabled = !audioEngine.soundEnabled;
+      const icon = document.getElementById('audio-icon');
+      if (audioEngine.soundEnabled) {
+        icon.className = 'fa-solid fa-volume-high text-stark-cyan';
+        audioEngine.playClick();
+      } else {
+        icon.className = 'fa-solid fa-volume-xmark text-gray-500';
+      }
+    }
+
+    function toggleVoice() {
+      audioEngine.voiceEnabled = !audioEngine.voiceEnabled;
+      const icon = document.getElementById('voice-icon');
+      if (audioEngine.voiceEnabled) {
+        icon.className = 'fa-solid fa-comment-dots text-stark-gold';
+        audioEngine.speak("Voice interface active, Sir.");
+      } else {
+        icon.className = 'fa-solid fa-comment-slash text-gray-500';
+      }
+    }
+
+    /* Stark Realtime HUD Clock Widget */
+    function startStarkClock() {
+      const clockEl = document.getElementById('stark-clock-label');
+      const dateEl = document.getElementById('stark-date-label');
+      const dayEl = document.getElementById('stark-day-label');
+
+      setInterval(() => {
+        const now = new Date();
+        const hrs = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        const secs = String(now.getSeconds()).padStart(2, '0');
+        const ms = String(Math.floor(now.getMilliseconds() / 10)).padStart(2, '0');
+
+        clockEl.innerHTML = `${hrs}:${mins}:${secs}.<span class="text-xs text-stark-gold">${ms}</span>`;
+        dateEl.innerText = now.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+        dayEl.innerText = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+      }, 40);
+    }
+
+    /* Toast HUD Banner */
+    function showToast(title, message) {
+      const toast = document.getElementById('stark-toast');
+      document.getElementById('toast-title').innerText = title;
+      document.getElementById('toast-msg').innerText = message;
+
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    /* Utility Helpers */
+    function getPriorityColor(priority) {
+      switch (priority) {
+        case 'CRITICAL': return '#ff0055';
+        case 'HIGH': return '#ffb700';
+        case 'MEDIUM': return '#00f0ff';
+        default: return '#0077ff';
+      }
+    }
+
+    function getPriorityBadge(priority) {
+      switch (priority) {
+        case 'CRITICAL':
+          return { bg: 'bg-stark-crimson/20', text: 'text-stark-crimson', border: 'border-stark-crimson/50' };
+        case 'HIGH':
+          return { bg: 'bg-stark-gold/20', text: 'text-stark-gold', border: 'border-stark-gold/50' };
+        case 'MEDIUM':
+          return { bg: 'bg-stark-cyan/20', text: 'text-stark-cyan', border: 'border-stark-cyan/50' };
+        default:
+          return { bg: 'bg-stark-blue/20', text: 'text-stark-blue', border: 'border-stark-blue/50' };
+      }
+    }
+
+    function formatDeadlineCountdown(deadlineStr) {
+      const diff = new Date(deadlineStr) - new Date();
+      if (diff < 0) return 'OVERDUE';
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const days = Math.floor(hours / 24);
+      if (days > 0) return `${days}d ${hours % 24}h remaining`;
+      return `${hours}h ${Math.floor((diff / (1000 * 60)) % 60)}m remaining`;
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* Initialize on Window Load */
+    window.onload = function () {
+      initThreeGalaxy();
+      startStarkClock();
+      updateUI();
+
+      // The authenticated session announces itself after the identity gate verifies the user.
+    };
+  </script>
+
+  <script>
+    // =====================================================================
+    // J.A.R.V.I.S. ACCOUNT GATE | Firebase Authentication + per-user Firestore
+    // Replace the placeholder config values with your Firebase Web App config.
+    // The config is public client configuration; Firestore Security Rules protect data.
+    // =====================================================================
+    const JARVIS_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyA5DGY4g5noRuNGQVxE6vdpZGUSE6JbOvg",
+      authDomain: "to-do-list-1d711.firebaseapp.com",
+      projectId: "to-do-list-1d711",
+      storageBucket: "to-do-list-1d711.firebasestorage.app",
+      messagingSenderId: "393903888945",
+      appId: "1:393903888945:web:a207e43800cbd20c1ed310",
+      measurementId: "G-W62WT70H9G"
+    };
+
+    const JARVIS_FIREBASE_CONFIG_READY =
+      JARVIS_FIREBASE_CONFIG.apiKey !== "YOUR_FIREBASE_API_KEY" &&
+      JARVIS_FIREBASE_CONFIG.authDomain !== "YOUR_AUTH_DOMAIN" &&
+      JARVIS_FIREBASE_CONFIG.projectId !== "YOUR_PROJECT_ID" &&
+      JARVIS_FIREBASE_CONFIG.appId !== "YOUR_FIREBASE_APP_ID";
+
+    let jarvisAuth = null;
+    let jarvisDb = null;
+    let jarvisCurrentUser = null;
+    let jarvisBusy = false;
+    let jarvisPendingGoogleUser = null;
+    let jarvisCloudSaveTimer = null;
+
+    window.jarvisCurrentUid = null;
+
+    function jarvisNormalizeUsername(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function jarvisUsernameIsValid(value) {
+      return /^[a-z0-9_]{3,20}$/.test(value);
+    }
+
+    // Firebase email/password auth requires an email-shaped identifier. This
+    // reserved, non-routable alias lets password accounts authenticate by username.
+    function jarvisUsernameAuthAlias(username) {
+      return `${jarvisNormalizeUsername(username)}@accounts.jarvis.invalid`;
+    }
+
+    function jarvisFreshDefaultState() {
+      return JSON.parse(JSON.stringify(defaultState));
+    }
+
+    function jarvisSetAuthStatus(message, kind = "info") {
+      const status = document.getElementById("auth-status");
+      if (!status) return;
+      status.textContent = message || "";
+      status.className = "min-h-8 text-center text-xs font-mono mt-4 " +
+        (kind === "error" ? "text-stark-crimson" : kind === "success" ? "text-stark-cyan" : "text-gray-400");
+    }
+
+    function jarvisFriendlyAuthError(error) {
+      const code = error && error.code ? error.code : "";
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+        return "Username or password is incorrect.";
+      }
+      if (code === "auth/email-already-in-use") return "That username is already registered. Try signing in instead.";
+      if (code === "auth/weak-password") return "Choose a password with at least 8 characters.";
+      if (code === "auth/too-many-requests") return "Too many attempts. Pause briefly, then try again.";
+      if (code === "auth/popup-closed-by-user") return "Google sign-in was closed before it finished.";
+      if (code === "auth/popup-blocked") return "Your browser blocked the sign-in popup. Allow popups and try again.";
+      if (code === "auth/unauthorized-domain") return "This website's domain is not authorized in Firebase Authentication settings.";
+      if (code === "auth/network-request-failed") return "Network connection failed. Check your internet and try again.";
+      if (code === "app/username-taken") return "That username is already taken. Choose another one.";
+      if (code === "app/username-profile-mismatch") return "This account does not match that username. Check the ID and try again.";
+      if (code === "permission-denied" || (error && String(error.message || "").includes("Missing or insufficient permissions"))) {
+        return "Firebase blocked this request. Check that the Firestore security rules were installed correctly.";
+      }
+      return (error && error.message) ? error.message : "Authentication could not be completed. Check Firebase setup and try again.";
+    }
+
+    function setAuthMode(mode) {
+      if (jarvisPendingGoogleUser) {
+        jarvisSetAuthStatus("Finish choosing the username for your Google account, or select 'Use another account'.", "info");
+        return;
+      }
+      document.getElementById("auth-login-form").classList.toggle("hidden", mode !== "login");
+      document.getElementById("auth-register-form").classList.toggle("hidden", mode !== "register");
+      document.getElementById("auth-username-setup-form").classList.add("hidden");
+      document.getElementById("auth-mode-tabs").classList.remove("hidden");
+      document.getElementById("auth-google-area").classList.remove("hidden");
+      const loginTab = document.getElementById("auth-tab-login");
+      const registerTab = document.getElementById("auth-tab-register");
+      loginTab.className = mode === "login"
+        ? "bg-stark-cyan/20 border border-stark-cyan text-stark-cyan rounded px-3 py-2 text-[11px] font-orbitron"
+        : "bg-stark-dark/80 border border-stark-border text-gray-400 rounded px-3 py-2 text-[11px] font-orbitron";
+      registerTab.className = mode === "register"
+        ? "bg-stark-cyan/20 border border-stark-cyan text-stark-cyan rounded px-3 py-2 text-[11px] font-orbitron"
+        : "bg-stark-dark/80 border border-stark-border text-gray-400 rounded px-3 py-2 text-[11px] font-orbitron";
+      jarvisSetAuthStatus("");
+    }
+
+    function jarvisShowAuthGate() {
+      document.getElementById("auth-screen").classList.remove("hidden");
+      document.getElementById("auth-mode-tabs").classList.remove("hidden");
+      document.getElementById("auth-google-area").classList.remove("hidden");
+      document.getElementById("auth-login-form").classList.remove("hidden");
+      document.getElementById("auth-register-form").classList.add("hidden");
+      document.getElementById("auth-username-setup-form").classList.add("hidden");
+      document.getElementById("account-username-label").textContent = "OFFLINE";
+      setAuthMode("login");
+    }
+
+    function jarvisShowGoogleUsernameSetup(user) {
+      jarvisPendingGoogleUser = user;
+      document.getElementById("auth-screen").classList.remove("hidden");
+      document.getElementById("auth-mode-tabs").classList.add("hidden");
+      document.getElementById("auth-login-form").classList.add("hidden");
+      document.getElementById("auth-register-form").classList.add("hidden");
+      document.getElementById("auth-username-setup-form").classList.remove("hidden");
+      document.getElementById("auth-google-area").classList.add("hidden");
+      const suggested = jarvisNormalizeUsername((user.displayName || "").replace(/[^a-zA-Z0-9_]/g, "")).slice(0, 20);
+      document.getElementById("google-username").value = suggested.length >= 3 ? suggested : "";
+      jarvisSetAuthStatus("Google identity verified. Reserve a unique username to continue.", "success");
+    }
+
+    async function jarvisReserveUsername(user, username, providerName) {
+      const normalized = jarvisNormalizeUsername(username);
+      const usernameRef = jarvisDb.collection("usernames").doc(normalized);
+      const userRef = jarvisDb.collection("users").doc(user.uid);
+      await jarvisDb.runTransaction(async transaction => {
+        const existing = await transaction.get(usernameRef);
+        if (existing.exists && existing.data().uid !== user.uid) {
+          const takenError = new Error("Username already taken");
+          takenError.code = "app/username-taken";
+          throw takenError;
+        }
+        if (!existing.exists) {
+          transaction.set(usernameRef, {
+            uid: user.uid,
+            username: normalized,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        transaction.set(userRef, {
+          username: normalized,
+          authProvider: providerName,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      });
+      return { username: normalized, authProvider: providerName };
+    }
+
+    async function jarvisRouteAuthenticatedUser(user) {
+      jarvisBusy = true;
+      try {
+        if (user.isAnonymous) {
+          const guestProfile = {
+            username: "GUEST_" + user.uid.slice(0, 6),
+            authProvider: "anonymous"
+          };
+
+          await jarvisLaunchUserSession(user, guestProfile);
+          return;
+        }
+        const profileSnapshot = await jarvisDb.collection("users").doc(user.uid).get();
+        const profile = profileSnapshot.exists ? profileSnapshot.data() : null;
+        if (!profile || !profile.username) {
+          jarvisShowGoogleUsernameSetup(user);
+          return;
+        }
+        await jarvisLaunchUserSession(user, profile);
+      } catch (error) {
+        console.error("J.A.R.V.I.S. account initialization failed:", error);
+        jarvisSetAuthStatus(jarvisFriendlyAuthError(error), "error");
+        document.getElementById("auth-screen").classList.remove("hidden");
+      } finally {
+        jarvisBusy = false;
+      }
+    }
+
+    async function jarvisLaunchUserSession(user, profile) {
+      if (jarvisCloudSaveTimer) {
+        clearTimeout(jarvisCloudSaveTimer);
+        jarvisCloudSaveTimer = null;
+      }
+      const stateRef = jarvisDb.collection("users").doc(user.uid).collection("app").doc("state");
+      const stateSnapshot = await stateRef.get();
+      let loadedState;
+      if (stateSnapshot.exists) {
+        const payload = stateSnapshot.data();
+        if (payload && payload.appState && Array.isArray(payload.appState.lists) && payload.appState.lists.length) {
+          loadedState = payload.appState;
+        }
+      }
+      if (!loadedState) {
+        loadedState = jarvisFreshDefaultState();
+      }
+
+      // Ensure the first state document exists before exposing the app UI.
+      if (!stateSnapshot.exists) {
+        await stateRef.set({
+          appState: loadedState,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      // The authenticated UID is the only key used for cloud reads and writes.
+      jarvisCurrentUser = user;
+      window.jarvisCurrentUid = user.uid;
+      appState = loadedState;
+      jarvisPendingGoogleUser = null;
+      document.getElementById("account-username-label").textContent = profile.username.toUpperCase();
+      document.getElementById("auth-screen").classList.add("hidden");
+      updateUI();
+      showToast("IDENTITY VERIFIED", `Welcome, ${profile.username}. Your private galaxy is online.`);
+      audioEngine.speak(`Welcome, ${profile.username}. Your task protocols are synced, Sir.`);
+    }
+
+    window.jarvisPersistState = function (state) {
+      const uid = window.jarvisCurrentUid;
+      if (!uid || !jarvisDb) return;
+      if (jarvisCloudSaveTimer) clearTimeout(jarvisCloudSaveTimer);
+      const stateSnapshot = JSON.parse(JSON.stringify(state));
+      jarvisCloudSaveTimer = setTimeout(async () => {
+        if (window.jarvisCurrentUid !== uid) return;
+        try {
+          await jarvisDb.collection("users").doc(uid).collection("app").doc("state").set({
+            appState: stateSnapshot,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (error) {
+          console.error("Cloud sync failed:", error);
+          showToast("CLOUD SYNC FAILED", "Changes remain in this session. Check connection and Firestore rules.");
+        }
+      }, 450);
+    };
+
+    async function handleUsernameLogin(event) {
+      event.preventDefault();
+      if (!JARVIS_FIREBASE_CONFIG_READY || !jarvisAuth || !jarvisDb) {
+        jarvisSetAuthStatus("Firebase setup is incomplete. Follow the setup guide before signing in.", "error");
+        return;
+      }
+      if (jarvisBusy) return;
+      const username = jarvisNormalizeUsername(document.getElementById("login-username").value);
+      const password = document.getElementById("login-password").value;
+      if (!jarvisUsernameIsValid(username)) {
+        jarvisSetAuthStatus("Username must be 3–20 characters using letters, numbers or underscores.", "error");
+        return;
+      }
+      jarvisBusy = true;
+      jarvisSetAuthStatus("Verifying identity and loading your task galaxy…");
+      try {
+        const credential = await jarvisAuth.signInWithEmailAndPassword(jarvisUsernameAuthAlias(username), password);
+        const profileSnapshot = await jarvisDb.collection("users").doc(credential.user.uid).get();
+        const profile = profileSnapshot.exists ? profileSnapshot.data() : null;
+        if (!profile || profile.username !== username) {
+          await jarvisAuth.signOut();
+          const mismatch = new Error("Account profile does not match username");
+          mismatch.code = "app/username-profile-mismatch";
+          throw mismatch;
+        }
+        await jarvisLaunchUserSession(credential.user, profile);
+        jarvisSetAuthStatus("");
+      } catch (error) {
+        console.error("Username sign-in failed:", error);
+        jarvisSetAuthStatus(jarvisFriendlyAuthError(error), "error");
+      } finally {
+        jarvisBusy = false;
+      }
+    }
+
+    async function handleUsernameRegister(event) {
+      event.preventDefault();
+      if (!JARVIS_FIREBASE_CONFIG_READY || !jarvisAuth || !jarvisDb) {
+        jarvisSetAuthStatus("Firebase setup is incomplete. Follow the setup guide before creating an ID.", "error");
+        return;
+      }
+      if (jarvisBusy) return;
+      const username = jarvisNormalizeUsername(document.getElementById("register-username").value);
+      const password = document.getElementById("register-password").value;
+      const confirmation = document.getElementById("register-confirm-password").value;
+      if (!jarvisUsernameIsValid(username)) {
+        jarvisSetAuthStatus("Username must be 3–20 characters using letters, numbers or underscores.", "error");
+        return;
+      }
+      if (password.length < 8) {
+        jarvisSetAuthStatus("Choose a password with at least 8 characters.", "error");
+        return;
+      }
+      if (password !== confirmation) {
+        jarvisSetAuthStatus("The passwords do not match.", "error");
+        return;
+      }
+
+      jarvisBusy = true;
+      jarvisSetAuthStatus("Creating your unique Stark identity…");
+      let newlyCreatedUser = null;
+      let usernameReserved = false;
+      try {
+        const credential = await jarvisAuth.createUserWithEmailAndPassword(jarvisUsernameAuthAlias(username), password);
+        newlyCreatedUser = credential.user;
+        await newlyCreatedUser.updateProfile({ displayName: username });
+        const profile = await jarvisReserveUsername(newlyCreatedUser, username, "username");
+        usernameReserved = true;
+        await jarvisLaunchUserSession(newlyCreatedUser, profile);
+        jarvisSetAuthStatus("");
+      } catch (error) {
+        console.error("Username registration failed:", error);
+        if (newlyCreatedUser && !usernameReserved) {
+          // Roll back only when the identity reservation itself did not complete.
+          try { await newlyCreatedUser.delete(); } catch (cleanupError) { console.warn("Could not roll back new account:", cleanupError); }
+          try { await jarvisAuth.signOut(); } catch (_) { }
+        } else if (newlyCreatedUser && usernameReserved) {
+          // Keep the claimed account intact if a transient first sync failed;
+          // it can sign in again and retry loading its state.
+          try { await jarvisAuth.signOut(); } catch (_) { }
+        }
+        jarvisSetAuthStatus(jarvisFriendlyAuthError(error), "error");
+      } finally {
+        jarvisBusy = false;
+      }
+    }
+
+    async function handleGoogleSignIn() {
+      if (!JARVIS_FIREBASE_CONFIG_READY || !jarvisAuth || !jarvisDb) {
+        jarvisSetAuthStatus("Firebase setup is incomplete. Follow the setup guide before signing in.", "error");
+        return;
+      }
+      if (jarvisBusy) return;
+      jarvisBusy = true;
+      jarvisSetAuthStatus("Connecting to Google securely…");
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const result = await jarvisAuth.signInWithPopup(provider);
+        const profileSnapshot = await jarvisDb.collection("users").doc(result.user.uid).get();
+        const profile = profileSnapshot.exists ? profileSnapshot.data() : null;
+        if (!profile || !profile.username) {
+          jarvisShowGoogleUsernameSetup(result.user);
+          jarvisSetAuthStatus("Google identity verified. Choose your unique J.A.R.V.I.S. username.", "success");
+        } else {
+          await jarvisLaunchUserSession(result.user, profile);
+          jarvisSetAuthStatus("");
+        }
+      } catch (error) {
+        console.error("Google sign-in failed:", error);
+        jarvisSetAuthStatus(jarvisFriendlyAuthError(error), "error");
+      } finally {
+        jarvisBusy = false;
+      }
+    }
+    async function signInAsGuest() {
+      if (!JARVIS_FIREBASE_CONFIG_READY || !jarvisAuth || !jarvisDb) {
+        jarvisSetAuthStatus("Firebase setup is incomplete.", "error");
+        return;
+      }
+
+      if (jarvisBusy) return;
+
+      jarvisBusy = true;
+      jarvisSetAuthStatus("Initializing guest identity...");
+
+      try {
+        // Create a temporary Firebase anonymous account
+        const credential = await jarvisAuth.signInAnonymously();
+        const user = credential.user;
+
+        // Give this guest a unique display identity
+        const guestUsername =
+          "GUEST_" + user.uid.slice(0, 8).toUpperCase();
+
+        const profile = {
+          username: guestUsername,
+          authProvider: "anonymous",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // Save the guest profile under their own Firebase UID
+        await jarvisDb.collection("users")
+          .doc(user.uid)
+          .set(profile, { merge: true });
+
+        // Load or initialize this guest's private task galaxy
+        await jarvisLaunchUserSession(user, {
+          username: guestUsername,
+          authProvider: "anonymous"
+        });
+
+        jarvisSetAuthStatus("");
+
+      } catch (error) {
+        console.error("Guest sign-in failed:", error);
+        jarvisSetAuthStatus(
+          jarvisFriendlyAuthError(error),
+          "error"
+        );
+      } finally {
+        jarvisBusy = false;
+      }
+    }
+    async function handleGoogleUsernameSubmit(event) {
+      event.preventDefault();
+      if (jarvisBusy || !jarvisPendingGoogleUser) return;
+      const username = jarvisNormalizeUsername(document.getElementById("google-username").value);
+      if (!jarvisUsernameIsValid(username)) {
+        jarvisSetAuthStatus("Username must be 3–20 characters using letters, numbers or underscores.", "error");
+        return;
+      }
+      jarvisBusy = true;
+      jarvisSetAuthStatus("Reserving your unique username…");
+      try {
+        const user = jarvisPendingGoogleUser;
+        const profile = await jarvisReserveUsername(user, username, "google");
+        await jarvisLaunchUserSession(user, profile);
+        jarvisSetAuthStatus("");
+      } catch (error) {
+        console.error("Google username setup failed:", error);
+        jarvisSetAuthStatus(jarvisFriendlyAuthError(error), "error");
+      } finally {
+        jarvisBusy = false;
+      }
+    }
+
+    async function cancelGoogleUsernameSetup() {
+      if (!jarvisAuth || jarvisBusy) return;
+      jarvisBusy = true;
+      try { await jarvisAuth.signOut(); } catch (error) { console.warn(error); }
+      jarvisPendingGoogleUser = null;
+      jarvisCurrentUser = null;
+      window.jarvisCurrentUid = null;
+      appState = jarvisFreshDefaultState();
+      updateUI();
+      jarvisShowAuthGate();
+      jarvisBusy = false;
+    }
+
+    async function jarvisSignOut() {
+      if (!jarvisAuth || jarvisBusy) return;
+      jarvisBusy = true;
+      try {
+        if (jarvisCloudSaveTimer) {
+          clearTimeout(jarvisCloudSaveTimer);
+          jarvisCloudSaveTimer = null;
+        }
+        const uid = window.jarvisCurrentUid;
+        if (uid && jarvisDb) {
+          try {
+            await jarvisDb.collection("users").doc(uid).collection("app").doc("state").set({
+              appState: JSON.parse(JSON.stringify(appState)),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } catch (saveError) {
+            console.error("Final sync before sign-out failed:", saveError);
+          }
+        }
+        await jarvisAuth.signOut();
+      } catch (error) {
+        console.error("Sign-out failed:", error);
+      } finally {
+        jarvisCurrentUser = null;
+        window.jarvisCurrentUid = null;
+        jarvisPendingGoogleUser = null;
+        appState = jarvisFreshDefaultState();
+        updateUI();
+        jarvisShowAuthGate();
+        jarvisBusy = false;
+      }
+    }
+
+    (function initializeJarvisIdentityGate() {
+      if (!JARVIS_FIREBASE_CONFIG_READY) {
+        document.getElementById("auth-config-warning").classList.remove("hidden");
+        jarvisSetAuthStatus("Add Firebase config values in the JARVIS_FIREBASE_CONFIG block to activate login.", "error");
+        return;
+      }
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(JARVIS_FIREBASE_CONFIG);
+        jarvisAuth = firebase.auth();
+        jarvisDb = firebase.firestore();
+        jarvisAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(error => {
+          console.warn("Could not set persistent auth session:", error);
+        });
+        jarvisAuth.onAuthStateChanged(user => {
+          if (jarvisBusy) return;
+          if (!user) {
+            jarvisCurrentUser = null;
+            window.jarvisCurrentUid = null;
+            appState = jarvisFreshDefaultState();
+            jarvisShowAuthGate();
+            return;
+          }
+          jarvisRouteAuthenticatedUser(user);
+        });
+      } catch (error) {
+        console.error("Firebase initialization failed:", error);
+        document.getElementById("auth-config-warning").classList.remove("hidden");
+        jarvisSetAuthStatus("Firebase could not initialize. Check the web configuration and SDK network access.", "error");
+      }
+    })();
+  </script>
+
+</body>
+
+</html>
