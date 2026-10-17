@@ -73,6 +73,18 @@ and deadlines, and sign in to access your personal task space.
 
 ## Project Status
 
+
+## 📬 Support & Feedback
+
+Have a question, found a bug, or have an idea to improve J.A.R.V.I.S.?
+
+- **Bug reports:** [Report an issue](https://github.com/beginning-the-future/3D_todolist/issues)
+- **Feature requests:** Open an issue with the `enhancement` label.
+- **Email support:** beginningthefuture21@gmail.com
+
+Your feedback helps improve the J.A.R.V.I.S. Galaxy Task System! 🌌
+
+
 A personal web project under development. Firebase features depend on
 the project's current configuration and security rules.
 
